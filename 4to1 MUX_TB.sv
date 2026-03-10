@@ -46,7 +46,7 @@ module MUX_tb;
         mbx.get(m);
         inf.sel = m.sel;
         inf.ip = m.ip;
-        #5;
+        #10;
       end
       
       
@@ -61,13 +61,10 @@ module MUX_tb;
       this.inf = inf;
     endfunction
     task run();
-    forever begin
+      MUX_trans p1;
+      repeat(200) begin
       #5;
-      
-      
-        MUX_trans p1 = new();
-      
-      
+        p1 = new();
         p1.sel = inf.sel;
         p1.ip = inf.ip;
         p1.out = inf.out;
@@ -78,22 +75,61 @@ module MUX_tb;
   endtask
   endclass
   
+  class MUX_scoreb;
+    mailbox #(MUX_trans) mbs;
+    int item_pass,item_fail;
+    function new(mailbox #(MUX_trans) mbs);
+      this.mbs = mbs;
+    endfunction
+    task run();
+      MUX_trans p2 ;
+      bit expected;
+      repeat(200) begin
+        
+        
+        mbs.get(p2);
+        expected = p2.ip[p2.sel];
+        
+        
+        if(p2.out == expected) begin
+          $display("PASS: t=%0t sel = %b ip =%b out =%b",$time,p2.sel,p2.ip,p2.out);
+         item_pass++;
+        end
+        else begin
+          $display("FAIL: t=%0t sel = %b ip =%b out =%b expected = %b",$time,p2.sel,p2.ip,p2.out,expected);
+        item_fail++;
+        end
+        
+        
+      end
+      $display("NO. of pass test case is %d",item_pass);
+        $display("NO.of fail test case is %d",item_fail);
+    endtask
+    
+  endclass
   
+        
+          
   MUX_gen g1;
   MUX_drive d1;
   MUX_monitor m1;
+  MUX_scoreb s1;
   
   initial begin
     g1 = new(mbx);
     d1 = new(mbx);
     m1 = new(inf,mbs);
+    s1 = new(mbs);
     
     d1.inf = inf;
     fork
       g1.run();
       d1.run();
       m1.run();
+      s1.run();
     join
+    $display("Simulation Finished");
+    $finish;
     
   end
   
